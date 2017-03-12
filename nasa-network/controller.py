@@ -18,7 +18,7 @@ class forwardingPrefix(enum.Enum):
     status = '-s'
 
 # Commented out for testing purposes only
-CLIENT_IP_ADDRESS = 'localhost'#'192.168.1.2'
+CLIENT_IP_ADDRESS = '192.168.1.2'
 CLIENT_PORT_NUMBER = 1123
 
 CONTROLLER_IP_ADDRESS = '0.0.0.0'
