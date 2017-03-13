@@ -6,19 +6,20 @@ import re
 import atexit
 import signal
 import sys
+import time
 
 def signalHandler(signal, frame):
     sys.exit(0)
 
 class forwardingPrefix(enum.Enum):
-    client = '-c',
-    tango = '-t',
-    motor = '-m',
-    debug = '-d',
-    status = '-s'
+    CLIENT = '-c'
+    TANGO = '-t'
+    MOTOR = '-m'
+    DEBUG = '-d'
+    STATUS = '-s'
 
 # Commented out for testing purposes only
-CLIENT_IP_ADDRESS = '192.168.1.2'
+CLIENT_IP_ADDRESS = 'localhost'#'192.168.1.2'
 CLIENT_PORT_NUMBER = 1123
 
 CONTROLLER_IP_ADDRESS = '0.0.0.0'
@@ -28,19 +29,18 @@ CONTROLLER_TO_TANGO_PORT_NUMBER = 2134
 TANGO_IP_ADDRESS = '192.168.1.4'
 TANGO_PORT_NUMBER = 5589
 
-forwardToClientRegex = re.compile('^' + forwardingPrefix.client[0] + '([\s\S]*)$')
-forwardToTangoRegex = re.compile('^' + forwardingPrefix.tango[0] + '([\s\S]*)$')
-forwardToMotorRegex = re.compile('^' + forwardingPrefix.motor[0] + '([\s\S]*)$')
+forwardToClientRegex = re.compile('^' + forwardingPrefix.CLIENT + '([\s\S]*)$')
+forwardToTangoRegex = re.compile('^' + forwardingPrefix.TANGO + '([\s\S]*)$')
+forwardToMotorRegex = re.compile('^' + forwardingPrefix.MOTOR + '([\s\S]*)$')
 
-debugRegex = re.compile('^' + forwardingPrefix.debug[0] + '([\s\S]*)$')
-statusRegex = re.compile('^' + forwardingPrefix.status[0] + '([\s\S]*)$')
+debugRegex = re.compile('^' + forwardingPrefix.DEBUG + '([\s\S]*)$')
+statusRegex = re.compile('^' + forwardingPrefix.STATUS + '([\s\S]*)$')
 
 class Controller():
     def __init__(self):
         atexit.register(self.shutdown)
 
         #self.motorConnection = motorLib.connection()
-        print forwardingPrefix.client
 
         self.clientConnection = connection.main(serverIPAddress=CONTROLLER_IP_ADDRESS, serverPortNumber=CONTROLLER_TO_CLIENT_PORT_NUMBER,
                                            clientIPAddress=CLIENT_IP_ADDRESS, clientPortNumber=CLIENT_PORT_NUMBER)
@@ -52,6 +52,9 @@ class Controller():
 
     def run(self):
         ADBLib.startADB()
+
+        # For testing purposes only
+        i = 0
         while True:
             clientMessage = self.clientConnection.getMessage()
             if clientMessage is not None:
@@ -62,6 +65,12 @@ class Controller():
             if tangoMessage is not None:
                 print 'Controller received the following message from the tango:', tangoMessage
                 self.forwardMessage(tangoMessage)
+
+            # For testing purposes only
+            # self.clientConnection.send('Controller message ' + str(i))
+            i += 1
+            #time.sleep(1.0)
+
 
     def forwardMessage(self, message):
         print 'Forwarding message:', message
