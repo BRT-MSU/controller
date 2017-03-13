@@ -53,8 +53,6 @@ class Controller():
     def run(self):
         ADBLib.startADB()
 
-        # For testing purposes only
-        i = 0
         while True:
             clientMessage = self.clientConnection.getMessage()
             if clientMessage is not None:
@@ -65,11 +63,6 @@ class Controller():
             if tangoMessage is not None:
                 print 'Controller received the following message from the tango:', tangoMessage
                 self.forwardMessage(tangoMessage)
-
-            # For testing purposes only
-            # self.clientConnection.send('Controller message ' + str(i))
-            i += 1
-            #time.sleep(1.0)
 
 
     def forwardMessage(self, message):
