@@ -1,12 +1,11 @@
 import connection
 import adbLib as ADBLib
-#import motorLib
+import motorLib
 import enum
 import re
 import atexit
 import signal
 import sys
-import time
 
 def signalHandler(signal, frame):
     sys.exit(0)
@@ -19,7 +18,7 @@ class forwardingPrefix(enum.Enum):
     STATUS = '-s'
 
 # Commented out for testing purposes only
-CLIENT_IP_ADDRESS = 'localhost'#'192.168.1.2'
+CLIENT_IP_ADDRESS = '192.168.1.2'
 CLIENT_PORT_NUMBER = 1123
 
 CONTROLLER_IP_ADDRESS = '0.0.0.0'
@@ -40,7 +39,7 @@ class Controller():
     def __init__(self):
         atexit.register(self.shutdown)
 
-        #self.motorConnection = motorLib.connection()
+        self.motorConnection = motorLib.MotorConnection()
 
         self.clientConnection = connection.main(serverIPAddress=CONTROLLER_IP_ADDRESS, serverPortNumber=CONTROLLER_TO_CLIENT_PORT_NUMBER,
                                            clientIPAddress=CLIENT_IP_ADDRESS, clientPortNumber=CLIENT_PORT_NUMBER)
@@ -68,12 +67,11 @@ class Controller():
     def forwardMessage(self, message):
         print 'Forwarding message:', message
         if re.match(forwardToClientRegex, message):
-             self.clientConnection.send(message)
+             self.clientConnection.send(re.match(forwardToClientRegex, message).group(1))
         elif re.match(forwardToTangoRegex, message):
-             self.tangoConnection.send(message)
+             self.tangoConnection.send(re.match(forwardToTangoRegex, message).group(1))
         elif re.match(forwardToMotorRegex, message):
-             print 'Motor controller command sent:', re.match(forwardToMotorRegex, message).group(1)
-             #self.motorConnection.parseInstruction(message)
+             self.motorConnection.parseMessage(re.match(forwardToMotorRegex, message).group(1))
 
     def shutdown(self):
         self.clientConnection.closeServerSocket()

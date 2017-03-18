@@ -1,30 +1,62 @@
-from roboclaw import Roboclaw
+#from roboclaw import Roboclaw
+#import enum
+import re
 import enum
 
+class subMessagePrefix(enum.Enum):
+    LEFT_MOTOR = 'l'
+    RIGHT_MOTOR = 'r'
+    ACTUATOR = 'a'
+    BUCKET = 'b'
+    SERVO = 's'
 
-class Controller:
+motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
+
+class MotorConnection():
     def __init__(self, communicationPort = '/dev/roboclaw', baudRate = 115200,
                  driveAddress = '0x80', bucketAddress = '0x81'):
-        self.controller = Roboclaw(communicationPort, baudRate)
-        self.controller.open()
-        self.driveAddress = driveAddress
+        print 'MotorConnnection initialized.'
+        #self.controller = Roboclaw(communicationPort, baudRate)
+        #self.controller.open()
+        #self.driveAddress = driveAddress
 
-        self.bucketAddress = bucketAddress
+        #self.bucketAddress = bucketAddress
 
     def leftDrive(self, speed):
-        self.controller.SpeedM1(driveAddress, speed)
+        print 'Left motor at speed:', speed
+        #self.controller.SpeedM1(driveAddress, speed)
 
     def rightDrive(self, speed):
-        self.controller.SpeedM2(driveAddress, speed)
+        print 'Right motor at speed:', speed
+        #self.controller.SpeedM2(driveAddress, speed)
 
-    def bucketActuate(self, value):
-        self.controller.SpeedM1(bucketAddress, value)
+    def bucketActuate(self, speed):
+        print 'Actuator motor at speed:', speed
+        #self.controller.SpeedM1(bucketAddress, value)
 
-    def bucketRotate(self, value):
-        self.controller.SpeedM2(bucketAddress, value)
+    def bucketRotate(self, speed):
+        print 'Bucket motor at speed:', speed
+        #self.controller.SpeedM2(bucketAddress, value)
 
-    def parseInstruction(self, instruction):
-        print 'Maybe one day I will understand %s \n:(' % instruction
+    def parseMessage(self, message):
+        subMessages = motorMessageRegex.findall(message)
+
+        for subMessage in subMessages:
+            motorPrefix = subMessage[0]
+            speed = subMessage[1]
+
+            if motorPrefix == subMessagePrefix.LEFT_MOTOR:
+                self.leftDrive(speed)
+            elif motorPrefix == subMessagePrefix.RIGHT_MOTOR:
+                self.rightDrive(speed)
+            elif motorPrefix == subMessagePrefix.ACTUATOR:
+                self.bucketActuate(speed)
+            elif motorPrefix == subMessagePrefix.BUCKET:
+                self.bucketRotate(speed)
+            else:
+                print 'MotorPrefix "', motorPrefix, '" unrecognized.'
+
+
 
 
 
