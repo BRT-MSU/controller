@@ -1,5 +1,5 @@
 import connection
-import adbLib as ADBLib
+#import adbLib as ADBLib
 import motorLib
 import enum
 import re
@@ -50,7 +50,7 @@ class Controller():
         self.run()
 
     def run(self):
-        ADBLib.startADB()
+        #ADBLib.startADB()
 
         while True:
             clientMessage = self.clientConnection.getMessage()
