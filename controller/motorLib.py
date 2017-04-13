@@ -3,9 +3,12 @@ import re
 import enum
 import time
 
-DEFAULT_TIME_TO_DELAY_MOTOR = 0.02 # delay for 20 milliseconds
-MAX_MOTOR_SPEED = 100 # max speed from client
-MAX_MOTOR_POWER = 10000 # max power to motor controllers
+DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # delay for 20 milliseconds
+MAX_MOTOR_SPEED = 100  # max speed from client
+MAX_MOTOR_POWER = 10000  # max power to motor controllers
+
+motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
+
 
 class subMessagePrefix(enum.Enum):
     LEFT_MOTOR = 'l'
@@ -14,14 +17,19 @@ class subMessagePrefix(enum.Enum):
     BUCKET = 'b'
     SERVO = 's'
 
-motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
 
-class MotorConnection():
-    def __init__(self, communicationPort = '/dev/roboclaw', baudRate = 115200,
-                 driveAddress = 0x80, bucketAddress = 0x81):
+class roboclawStatus(enum.Enum):
+    CONNECTED = 'Roboclaw Connected'
+    DISCONNECTED = 'Roboclaw Disconnected'
+
+
+class MotorConnection:
+    def __init__(self, communicationPort='/dev/roboclaw', baudRate=115200,
+                 driveAddress=0x80, bucketAddress=0x81):
         print 'MotorConnnection initialized.'
         self.controller = Roboclaw(communicationPort, baudRate)
-        self.controller.Open()
+        self.status = roboclawStatus.CONNECTED if self.controller.Open() else roboclawStatus.DISCONNECTED
+
         self.driveAddress = driveAddress
 
         self.bucketAddress = bucketAddress
@@ -105,14 +113,21 @@ class MotorConnection():
         for subMessage in subMessages:
             motorPrefix = subMessage[0]
             speed = int(subMessage[1])
-
-            if motorPrefix == subMessagePrefix.LEFT_MOTOR:
-                self.leftDrive(speed)
-            elif motorPrefix == subMessagePrefix.RIGHT_MOTOR:
-                self.rightDrive(speed)
-            elif motorPrefix == subMessagePrefix.ACTUATOR:
-                self.bucketActuate(speed)
-            elif motorPrefix == subMessagePrefix.BUCKET:
-                self.bucketRotate(speed)
-            else:
-                print 'MotorPrefix "', motorPrefix, '" unrecognized.'
+            try:
+                if motorPrefix == subMessagePrefix.LEFT_MOTOR:
+                    self.leftDrive(speed)
+                elif motorPrefix == subMessagePrefix.RIGHT_MOTOR:
+                    self.rightDrive(speed)
+                elif motorPrefix == subMessagePrefix.ACTUATOR:
+                    self.bucketActuate(speed)
+                elif motorPrefix == subMessagePrefix.BUCKET:
+                    self.bucketRotate(speed)
+                else:
+                    print 'MotorPrefix "', motorPrefix, '" unrecognized.'
+            except AttributeError:
+                self.status = roboclawStatus.DISCONNECTED
+                print 'Roboclaw disconnected...retrying connection'
+                if self.controller.Open():
+                    print 'Roboclaw connected...retrying command'
+                    self.status = roboclawStatus.CONNECTED
+                    self.parseMessage(message)
