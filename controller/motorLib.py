@@ -9,14 +9,12 @@ MAX_MOTOR_POWER = 10000  # max power to motor controllers
 
 motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
 
-
 class subMessagePrefix(enum.Enum):
     LEFT_MOTOR = 'l'
     RIGHT_MOTOR = 'r'
     ACTUATOR = 'a'
     BUCKET = 'b'
     SERVO = 's'
-
 
 class roboclawStatus(enum.Enum):
     CONNECTED = 'Roboclaw Connected'
@@ -65,7 +63,7 @@ class MotorConnection:
             self.controller.SpeedM1(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Left motor at speed:', speed
+        print 'Left motor at speed:', speed, '%'
         self.leftMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Left motor at power:', power
@@ -77,7 +75,7 @@ class MotorConnection:
             self.controller.SpeedM2(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Right motor at speed:', speed
+        print 'Right motor at speed:', speed, '%'
         self.rightMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Right motor at power:', power
@@ -89,7 +87,7 @@ class MotorConnection:
             self.controller.SpeedM1(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Actuator motor at speed:', speed
+        print 'Actuator motor at speed:', speed, '%'
         self.actuatorMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Actuator motor at power:', power
@@ -101,7 +99,7 @@ class MotorConnection:
             self.controller.SpeedM2(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Bucket motor at speed:', speed
+        print 'Bucket motor at speed:', speed, '%'
         self.bucketMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Bucket motor at power:', power
