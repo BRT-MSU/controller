@@ -1,4 +1,4 @@
-from roboclaw import Roboclaw
+#from roboclaw import Roboclaw
 import re
 import enum
 import time
@@ -57,7 +57,7 @@ class MotorConnection():
             self.controller.SpeedM1(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Left motor at speed:', speed
+        print 'Left motor at speed:', speed, '%'
         self.leftMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Left motor at power:', power
@@ -69,7 +69,7 @@ class MotorConnection():
             self.controller.SpeedM2(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Right motor at speed:', speed
+        print 'Right motor at speed:', speed, '%'
         self.rightMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Right motor at power:', power
@@ -81,7 +81,7 @@ class MotorConnection():
             self.controller.SpeedM1(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Actuator motor at speed:', speed
+        print 'Actuator motor at speed:', speed, '%'
         self.actuatorMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Actuator motor at power:', power
@@ -93,7 +93,7 @@ class MotorConnection():
             self.controller.SpeedM2(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Bucket motor at speed:', speed
+        print 'Bucket motor at speed:', speed, '%'
         self.bucketMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Bucket motor at power:', power
