@@ -3,12 +3,9 @@ import re
 import enum
 import time
 
-DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # delay for 20 milliseconds
-MAX_MOTOR_SPEED = 100  # max speed from client
-MAX_MOTOR_POWER = 10000  # max power to motor controllers
-
-motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
-
+DEFAULT_TIME_TO_DELAY_MOTOR = 0.02 # delay for 20 milliseconds
+MAX_MOTOR_SPEED = 100 # max speed from client
+MAX_MOTOR_POWER = 127 # max power to motor controllers
 
 class subMessagePrefix(enum.Enum):
     LEFT_MOTOR = 'l'
@@ -17,19 +14,18 @@ class subMessagePrefix(enum.Enum):
     BUCKET = 'b'
     SERVO = 's'
 
-
 class roboclawStatus(enum.Enum):
     CONNECTED = 'Roboclaw Connected'
     DISCONNECTED = 'Roboclaw Disconnected'
 
+motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
 
-class MotorConnection:
-    def __init__(self, communicationPort='/dev/roboclaw', baudRate=115200,
-                 driveAddress=0x80, bucketAddress=0x81):
+class MotorConnection():
+    def __init__(self, communicationPort = '/dev/roboclaw', baudRate = 115200,
+                 driveAddress = 0x80, bucketAddress = 0x81):
         print 'MotorConnnection initialized.'
         self.controller = Roboclaw(communicationPort, baudRate)
         self.status = roboclawStatus.CONNECTED if self.controller.Open() else roboclawStatus.DISCONNECTED
-
         self.driveAddress = driveAddress
 
         self.bucketAddress = bucketAddress
@@ -62,50 +58,62 @@ class MotorConnection:
     def leftDrive(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.leftMotorSpeed):
             print 'Left motor speed changed direction.'
-            self.controller.SpeedM1(self.driveAddress, 0)
+            self.controller.ForwardM1(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Left motor at speed:', speed
         self.leftMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Left motor at power:', power
-        self.controller.SpeedM1(self.driveAddress, power)
+        if power >= 0:
+            self.controller.ForwardM1(self.driveAddress, power)
+        else:
+            self.controller.BackwardM1(self.driveAddress, abs(power))
 
     def rightDrive(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.rightMotorSpeed):
             print 'Right motor speed changed direction.'
-            self.controller.SpeedM2(self.driveAddress, 0)
+            self.controller.ForwardM2(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Right motor at speed:', speed
         self.rightMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Right motor at power:', power
-        self.controller.SpeedM2(self.driveAddress, power)
+        if power >= 0:
+            self.controller.ForwardM2(self.driveAddress, power)
+        else:
+            self.controller.BackwardM2(self.driveAddress, abs(power))
 
     def bucketActuate(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.actuatorMotorSpeed):
             print 'Actuator motor speed changed direction.'
-            self.controller.SpeedM1(self.bucketAddress, 0)
+            self.controller.ForwardM1(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Actuator motor at speed:', speed
         self.actuatorMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Actuator motor at power:', power
-        self.controller.SpeedM1(self.bucketAddress, power)
+        if power >= 0:
+            self.controller.ForwardM1(self.bucketAddress, power)
+        else:
+            self.controller.BackwardM1(self.bucketAddress, abs(power))
 
     def bucketRotate(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.bucketMotorSpeed):
             print 'Bucket motor speed changed direction.'
-            self.controller.SpeedM2(self.bucketAddress, 0)
+            self.controller.ForwardM2(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Bucket motor at speed:', speed
         self.bucketMotorSpeed = speed
         power = self.convertSpeedToPower(speed)
         print 'Bucket motor at power:', power
-        self.controller.SpeedM2(self.bucketAddress, power)
+        if power >= 0:
+            self.controller.ForwardM2(self.bucketAddress, power)
+        else:
+            self.controller.BackwardM2(self.bucketAddress, abs(power))
 
     def parseMessage(self, message):
         subMessages = motorMessageRegex.findall(message)
