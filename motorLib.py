@@ -5,7 +5,7 @@ import time
 
 DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # delay for 20 milliseconds
 MAX_MOTOR_SPEED = 100  # max speed from client
-MAX_MOTOR_POWER = 127  # max power to motor controllers (Max value for drive methods)
+MAX_MOTOR_POWER = 120  # max power to motor controllers (Max value for drive methods)
 
 motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
 
