@@ -1,4 +1,8 @@
+import os
+import subprocess
+
 from roboclaw import Roboclaw
+from servo import ServoController
 import re
 import enum
 import time
@@ -8,6 +12,7 @@ MAX_MOTOR_SPEED = 100  # max speed from client
 MAX_MOTOR_POWER = 120  # max power to motor controllers (Max value for drive methods)
 
 motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
+servoTTYAddressRegex = re.compile('/dev/ttyACM([\d]+)')
 
 class subMessagePrefix(enum.Enum):
     LEFT_MOTOR = 'l'
@@ -22,13 +27,35 @@ class roboclawStatus(enum.Enum):
 
 class MotorConnection():
     def __init__(self, communicationPort = '/dev/roboclaw', baudRate = 115200,
-                 driveAddress = 0x80, bucketAddress = 0x81):
-        print 'MotorConnnection initialized.'
+                 driveAddress = 0x80, bucketAddress = 0x81, servoAddress = '/dev/servo', servoChannel = 0):
         self.controller = Roboclaw(communicationPort, baudRate)
         self.status = roboclawStatus.CONNECTED if self.controller.Open() else roboclawStatus.DISCONNECTED
-        self.driveAddress = driveAddress
+        print 'MotorConnnection initialized.'
 
+        self.driveAddress = driveAddress
         self.bucketAddress = bucketAddress
+
+        self.servoAddress = servoAddress
+
+        # The servo controller has two virtual USB ports, so occasionally the Raspberry Pi
+        # assigns the wrong address (ttyACM2) to the servo controller. This code corrects that
+        # mistake by forcing the Pi to set  the address to ttyACM0 or ttyACM1. This is not optimal,
+        # but it is the best solution that I have for it now.
+        try:
+            while(True):
+                with open(servoAddress) as fd:
+                    servoTTYAddress = os.ttyname(fd.fileno())
+                    servoACMNumber = int(servoTTYAddressRegex.match(servoTTYAddress).group(1))
+                    if servoACMNumber is 0 or servoACMNumber is 1:
+                        print 'ServoConnection initialized.'
+                        break
+                    else:
+                        os.system('sudo udevadm trigger')
+        except IOError, AttributeError:
+            print 'ServoConnection failed to initialize.'
+
+        self.servoController = ServoController(self.servoAddress)
+        self.servoChannel = servoChannel
 
         self.leftMotorSpeed = 0
         self.rightMotorSpeed = 0
@@ -115,6 +142,9 @@ class MotorConnection():
         else:
             self.controller.BackwardM2(self.bucketAddress, abs(power))
 
+    def servo(self, angle):
+        self.servoController.setAngle(self.servoChannel, angle)
+
     def parseMessage(self, message):
         subMessages = motorMessageRegex.findall(message)
 
@@ -130,6 +160,8 @@ class MotorConnection():
                     self.bucketActuate(speed)
                 elif motorPrefix == subMessagePrefix.BUCKET:
                     self.bucketRotate(speed)
+                elif motorPrefix == subMessagePrefix.SERVO:
+                    self.servo(speed)
                 else:
                     print 'MotorPrefix "', motorPrefix, '" unrecognized.'
             except AttributeError:
