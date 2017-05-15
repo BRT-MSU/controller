@@ -48,11 +48,13 @@ class MotorConnection():
                     servoACMNumber = int(servoTTYAddressRegex.match(servoTTYAddress).group(1))
                     if servoACMNumber is 0 or servoACMNumber is 1:
                         print 'ServoConnection initialized.'
+                        self.servoConnectionInitialized = True
                         break
                     else:
                         os.system('sudo udevadm trigger')
         except IOError, AttributeError:
             print 'ServoConnection failed to initialize.'
+            self.servoConnectionInitialized = False
 
         self.servoController = ServoController(self.servoAddress)
         self.servoChannel = servoChannel
@@ -143,7 +145,8 @@ class MotorConnection():
             self.controller.BackwardM2(self.bucketAddress, abs(power))
 
     def servo(self, angle):
-        self.servoController.setAngle(self.servoChannel, angle)
+        if self.servoConnectionInitialized:
+            self.servoController.setAngle(self.servoChannel, angle)
 
     def parseMessage(self, message):
         subMessages = motorMessageRegex.findall(message)
