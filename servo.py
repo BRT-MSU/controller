@@ -13,7 +13,6 @@ class ServoController:
         byteOne = int(254 * angle / 180)
         bud = chr(0xFF) + chr(n) + chr(byteOne)
         self.sc.write(bud)
-        print 'Angle set'
 
     def setPosition(self, servo, position):
         position = position * 4
