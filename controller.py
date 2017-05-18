@@ -1,3 +1,5 @@
+from Queue import Queue
+
 import connection
 import motorLib
 import enum
@@ -5,6 +7,8 @@ import re
 import atexit
 import signal
 import sys
+from gyroscope import GyroscopeController
+from gyroBuffer import GyroBuffer
 
 def signalHandler(signal, frame):
     sys.exit(0)
@@ -28,6 +32,12 @@ CONTROLLER_TO_TANGO_PORT_NUMBER = 2134
 TANGO_IP_ADDRESS = '192.168.1.4'
 TANGO_PORT_NUMBER = 5589
 
+ARM_GYROSCOPE_ADDRESS = 0x68
+BUCKET_GYROSCOPE_ADDRESS = 0x69
+GYROSCOPE_TOLERANCE = 2.5
+GYROSCOPE_PRECISION = 1
+GYROSCOPE_BUFFER_SIZE = 20
+
 AUTONOMOY_ACTIVATION_MESSAGE = 'activate'
 AUTONOMY_DEACTIVATION_MESSAGE = 'deactivate'
 
@@ -45,6 +55,9 @@ class Controller():
 
         self.motorConnection = motorLib.MotorConnection()
 
+        self.armGyroConnection = GyroscopeController(address=ARM_GYROSCOPE_ADDRESS)
+        self.bucketGyroConnection = GyroscopeController(address=BUCKET_GYROSCOPE_ADDRESS)
+
         self.clientConnection = connection.main(serverIPAddress=CONTROLLER_IP_ADDRESS, serverPortNumber=CONTROLLER_TO_CLIENT_PORT_NUMBER,
                                            clientIPAddress=CLIENT_IP_ADDRESS, clientPortNumber=CLIENT_PORT_NUMBER)
 
@@ -52,6 +65,12 @@ class Controller():
                                           clientIPAddress=TANGO_IP_ADDRESS, clientPortNumber=TANGO_PORT_NUMBER)
 
         self.isAutonomyActivated = False
+
+        self.armGyroBuffer = GyroBuffer(GYROSCOPE_BUFFER_SIZE)
+        self.bucketGyroBuffer = GyroBuffer(GYROSCOPE_BUFFER_SIZE)
+
+        self.armRotation = 0.0
+        self.bucketRotation = 0.0
 
         self.run()
 
@@ -67,6 +86,29 @@ class Controller():
                 print 'Controller received the following message from the tango:', tangoMessage
                 self.forwardMessage(tangoMessage)
 
+            try:
+                armRotation = self.armGyroConnection.getXRotation()
+                self.armGyroBuffer.add(armRotation)
+            except IOError:
+                pass
+
+            try:
+                bucketRotation = self.bucketGyroConnection.getYRotation()
+                self.bucketGyroBuffer.add(bucketRotation)
+            except IOError:
+                pass
+
+            averageArmRotation = self.armGyroBuffer.computeAverage()
+            averageBucketRotation = self.bucketGyroBuffer.computeAverage()
+
+            # if averageArmRotation- self.armRotation > GYROSCOPE_TOLERANCE or \
+            #                         averageBucketRotation - self.bucketRotation > GYROSCOPE_TOLERANCE:
+
+            self.clientConnection.send(forwardingPrefix.CLIENT + 'a' + str(round(averageArmRotation, GYROSCOPE_PRECISION)) + \
+                                           'b' + str(round(averageBucketRotation, GYROSCOPE_PRECISION)))
+
+            self.armRotation = averageArmRotation
+            self.bucketRotation = averageBucketRotation
 
     def forwardMessage(self, message):
         print 'Forwarding message:', message
@@ -84,6 +126,7 @@ class Controller():
             self.motorConnection.parseMessage(re.match(forwardToMotorRegex, message).group(1))
 
     def shutdown(self):
+        self.motorConnection.close()
         self.clientConnection.closeServerSocket()
         self.tangoConnection.closeServerSocket()
 
