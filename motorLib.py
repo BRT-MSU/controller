@@ -29,6 +29,7 @@ class MotorConnection():
                  driveAddress = 0x80, bucketAddress = 0x81, servoAddress = '/dev/servo', servoChannel = 0):
         self.controller = Roboclaw(communicationPort, baudRate)
         self.status = roboclawStatus.CONNECTED if self.controller.Open() else roboclawStatus.DISCONNECTED
+        print self.status
         print 'MotorConnnection initialized.'
 
         self.driveAddress = driveAddress
@@ -173,3 +174,6 @@ class MotorConnection():
                     print 'Roboclaw connected...retrying command'
                     self.status = roboclawStatus.CONNECTED
                     self.parseMessage(message)
+
+    def close(self):
+        print 'closed connection:', self.controller.Close()
