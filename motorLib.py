@@ -1,5 +1,6 @@
 import os
 
+import controller
 from roboclaw import Roboclaw
 from servo import ServoController
 import re
@@ -13,6 +14,7 @@ MAX_MOTOR_POWER = 120  # max power to motor controllers (Max value for drive met
 motorMessageRegex = re.compile('([\w])([-]*[\d]+)\|')
 servoTTYAddressRegex = re.compile('/dev/ttyACM([\d]+)')
 
+
 class subMessagePrefix(enum.Enum):
     LEFT_MOTOR = 'l'
     RIGHT_MOTOR = 'r'
@@ -20,15 +22,19 @@ class subMessagePrefix(enum.Enum):
     BUCKET = 'b'
     SERVO = 's'
 
+
 class roboclawStatus(enum.Enum):
     CONNECTED = 'Roboclaw Connected'
     DISCONNECTED = 'Roboclaw Disconnected'
 
+
 class MotorConnection():
-    def __init__(self, communicationPort = '/dev/roboclaw', baudRate = 115200,
+    def __init__(self, piController, communicationPort = '/dev/roboclaw', baudRate = 115200,
                  driveAddress = 0x80, bucketAddress = 0x81, servoAddress = '/dev/servo', servoChannel = 0):
-        self.controller = Roboclaw(communicationPort, baudRate)
-        self.status = roboclawStatus.CONNECTED if self.controller.Open() else roboclawStatus.DISCONNECTED
+        self.piController = piController
+
+        self.motorController = Roboclaw(communicationPort, baudRate)
+        self.status = roboclawStatus.CONNECTED if self.motorController.Open() else roboclawStatus.DISCONNECTED
         print self.status
         print 'MotorConnnection initialized.'
 
@@ -87,7 +93,7 @@ class MotorConnection():
     def leftDrive(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.leftMotorSpeed):
             print 'Left motor speed changed direction.'
-            self.controller.ForwardM1(self.driveAddress, 0)
+            self.motorController.ForwardM1(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Left motor at speed:', speed, '%'
@@ -95,14 +101,14 @@ class MotorConnection():
         power = self.convertSpeedToPower(speed)
         print 'Left motor at power:', power
         if power >= 0:
-            self.controller.ForwardM1(self.driveAddress, power)
+            self.motorController.ForwardM1(self.driveAddress, power)
         else:
-            self.controller.BackwardM1(self.driveAddress, abs(power))
+            self.motorController.BackwardM1(self.driveAddress, abs(power))
 
     def rightDrive(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.rightMotorSpeed):
             print 'Right motor speed changed direction.'
-            self.controller.ForwardM2(self.driveAddress, 0)
+            self.motorController.ForwardM2(self.driveAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Right motor at speed:', speed, '%'
@@ -110,14 +116,14 @@ class MotorConnection():
         power = self.convertSpeedToPower(speed)
         print 'Right motor at power:', power
         if power >= 0:
-            self.controller.ForwardM2(self.driveAddress, power)
+            self.motorController.ForwardM2(self.driveAddress, power)
         else:
-            self.controller.BackwardM2(self.driveAddress, abs(power))
+            self.motorController.BackwardM2(self.driveAddress, abs(power))
 
     def bucketActuate(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.actuatorMotorSpeed):
             print 'Actuator motor speed changed direction.'
-            self.controller.ForwardM1(self.bucketAddress, 0)
+            self.motorController.ForwardM1(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Actuator motor at speed:', speed, '%'
@@ -125,14 +131,14 @@ class MotorConnection():
         power = self.convertSpeedToPower(speed)
         print 'Actuator motor at power:', power
         if power >= 0:
-            self.controller.ForwardM1(self.bucketAddress, power)
+            self.motorController.ForwardM1(self.bucketAddress, power)
         else:
-            self.controller.BackwardM1(self.bucketAddress, abs(power))
+            self.motorController.BackwardM1(self.bucketAddress, abs(power))
 
     def bucketRotate(self, speed):
         if not self.areSpeedDirectionsEqual(speed, self.bucketMotorSpeed):
             print 'Bucket motor speed changed direction.'
-            self.controller.ForwardM2(self.bucketAddress, 0)
+            self.motorController.ForwardM2(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print 'Bucket motor at speed:', speed, '%'
@@ -140,9 +146,9 @@ class MotorConnection():
         power = self.convertSpeedToPower(speed)
         print 'Bucket motor at power:', power
         if power >= 0:
-            self.controller.ForwardM2(self.bucketAddress, power)
+            self.motorController.ForwardM2(self.bucketAddress, power)
         else:
-            self.controller.BackwardM2(self.bucketAddress, abs(power))
+            self.motorController.BackwardM2(self.bucketAddress, abs(power))
 
     def servo(self, angle):
         if self.servoConnectionInitialized:
@@ -160,9 +166,27 @@ class MotorConnection():
                 elif motorPrefix == subMessagePrefix.RIGHT_MOTOR:
                     self.rightDrive(speed)
                 elif motorPrefix == subMessagePrefix.ACTUATOR:
-                    self.bucketActuate(speed)
+                    # Verify that the arm is below the maximum actuator angle before sending a command;
+                    # if the command is for lowering the arm, we don't care about the maximum actuator angle
+                    if (self.piController.armRotation < controller.MAX_ACTUATOR_ANGLE and speed > 0) or speed <= 0:
+                        self.bucketActuate(speed)
+                    # Actuator limit logic
+                    if speed > 0:
+                        self.piController.isActuatorMovingUp = True
+                    else:
+                        self.piController.isActuatorMovingUp = False
+                    # Logic to make sure that gyro information is only sent if the arms or bucket are moving
+                    if speed is not 0:
+                        self.piController.isActuatorMoving = True
+                    else:
+                        self.piController.isActuatorMoving = False
                 elif motorPrefix == subMessagePrefix.BUCKET:
                     self.bucketRotate(speed)
+                    # Logic to make sure that gyro information is only sent if the arms or bucket are moving
+                    if speed is not 0:
+                        self.piController.isBucketMoving = True
+                    else:
+                        self.piController.isBucketMoving = False
                 elif motorPrefix == subMessagePrefix.SERVO:
                     self.servo(speed)
                 else:
@@ -170,10 +194,10 @@ class MotorConnection():
             except AttributeError:
                 self.status = roboclawStatus.DISCONNECTED
                 print 'Roboclaw disconnected...retrying connection'
-                if self.controller.Open():
+                if self.motorController.Open():
                     print 'Roboclaw connected...retrying command'
                     self.status = roboclawStatus.CONNECTED
                     self.parseMessage(message)
 
     def close(self):
-        print 'closed connection:', self.controller.Close()
+        print 'closed connection:', self.motorController.Close()

@@ -1,17 +1,19 @@
-from Queue import Queue
-
 import connection
 import motorLib
+from gyroscope import GyroscopeController
+from gyroBuffer import GyroBuffer
+
+import time
 import enum
 import re
 import atexit
 import signal
 import sys
-from gyroscope import GyroscopeController
-from gyroBuffer import GyroBuffer
+
 
 def signalHandler(signal, frame):
     sys.exit(0)
+
 
 class forwardingPrefix(enum.Enum):
     CLIENT = '-c'
@@ -33,12 +35,18 @@ TANGO_IP_ADDRESS = '192.168.1.4'
 TANGO_PORT_NUMBER = 5589
 
 ARM_GYROSCOPE_ADDRESS = 0x68
+
 BUCKET_GYROSCOPE_ADDRESS = 0x69
-GYROSCOPE_TOLERANCE = 2.5
+
+GYROSCOPE_TOLERANCE = 1.5
 GYROSCOPE_PRECISION = 1
 GYROSCOPE_BUFFER_SIZE = 20
 
-AUTONOMOY_ACTIVATION_MESSAGE = 'activate'
+DEFAULT_TIME_DELAY = 0.1
+
+MAX_ACTUATOR_ANGLE = 30.0
+
+AUTONOMY_ACTIVATION_MESSAGE = 'activate'
 AUTONOMY_DEACTIVATION_MESSAGE = 'deactivate'
 
 forwardToClientRegex = re.compile('^' + forwardingPrefix.CLIENT + '([\s\S]*)$')
@@ -49,11 +57,12 @@ forwardToMotorRegex = re.compile('^' + forwardingPrefix.MOTOR + '([\s\S]*)$')
 debugRegex = re.compile('^' + forwardingPrefix.DEBUG + '([\s\S]*)$')
 statusRegex = re.compile('^' + forwardingPrefix.STATUS + '([\s\S]*)$')
 
+
 class Controller():
     def __init__(self):
         atexit.register(self.shutdown)
 
-        self.motorConnection = motorLib.MotorConnection()
+        self.motorConnection = motorLib.MotorConnection(self)
 
         self.armGyroConnection = GyroscopeController(address=ARM_GYROSCOPE_ADDRESS)
         self.bucketGyroConnection = GyroscopeController(address=BUCKET_GYROSCOPE_ADDRESS)
@@ -66,11 +75,19 @@ class Controller():
 
         self.isAutonomyActivated = False
 
+        # Gyroscope variables
         self.armGyroBuffer = GyroBuffer(GYROSCOPE_BUFFER_SIZE)
         self.bucketGyroBuffer = GyroBuffer(GYROSCOPE_BUFFER_SIZE)
 
         self.armRotation = 0.0
         self.bucketRotation = 0.0
+
+        self.isActuatorMovingUp = False
+
+        self.lastTimeCheck = time.time()
+
+        self.isActuatorMoving = False
+        self.isBucketMoving = False
 
         self.run()
 
@@ -86,14 +103,16 @@ class Controller():
                 print 'Controller received the following message from the tango:', tangoMessage
                 self.forwardMessage(tangoMessage)
 
+
+            # Collect gyroscope information and send it to the client.
             try:
-                armRotation = self.armGyroConnection.getXRotation()
+                armRotation = -1 * self.armGyroConnection.getXRotation()
                 self.armGyroBuffer.add(armRotation)
             except IOError:
                 pass
 
             try:
-                bucketRotation = self.bucketGyroConnection.getYRotation()
+                bucketRotation = -1 * self.bucketGyroConnection.getYRotation()
                 self.bucketGyroBuffer.add(bucketRotation)
             except IOError:
                 pass
@@ -101,23 +120,31 @@ class Controller():
             averageArmRotation = self.armGyroBuffer.computeAverage()
             averageBucketRotation = self.bucketGyroBuffer.computeAverage()
 
-            # if averageArmRotation- self.armRotation > GYROSCOPE_TOLERANCE or \
-            #                         averageBucketRotation - self.bucketRotation > GYROSCOPE_TOLERANCE:
+            timeCheck = time.time()
 
-            self.clientConnection.send(forwardingPrefix.CLIENT + 'a' + str(round(averageArmRotation, GYROSCOPE_PRECISION)) + \
-                                           'b' + str(round(averageBucketRotation, GYROSCOPE_PRECISION)))
+            # Only send gyroscope information at intervals when the arms or bucket is moving
+            if timeCheck - self.lastTimeCheck > DEFAULT_TIME_DELAY and (self.isActuatorMoving or self.isBucketMoving):
+                self.clientConnection.send(forwardingPrefix.CLIENT + 'a' + str(round(averageArmRotation, GYROSCOPE_PRECISION)) + \
+                                               'b' + str(round(averageBucketRotation, GYROSCOPE_PRECISION)))
+
+                self.lastTimeCheck = timeCheck
 
             self.armRotation = averageArmRotation
             self.bucketRotation = averageBucketRotation
+
+            if self.armRotation > MAX_ACTUATOR_ANGLE and self.isActuatorMovingUp:
+                # if the arm rotation is greater than the maximum actuator angle, we send
+                # an emergency stop command
+                self.motorConnection.parseMessage('a0|')
 
     def forwardMessage(self, message):
         print 'Forwarding message:', message
         if re.match(forwardToClientRegex, message):
             self.clientConnection.send(re.match(forwardToClientRegex, message).group(1))
         elif re.match(forwardToControllerRegex, message):
-            if re.match(forwardToControllerRegex, message).group(1) is AUTONOMOY_ACTIVATION_MESSAGE:
+            if re.match(forwardToControllerRegex, message).group(1) is AUTONOMY_ACTIVATION_MESSAGE:
                 self.isAutonomyActivated = True
-                self.tangoConnection.send(AUTONOMOY_ACTIVATION_MESSAGE)
+                self.tangoConnection.send(AUTONOMY_ACTIVATION_MESSAGE)
             elif re.match(forwardToControllerRegex, message).group(1) is AUTONOMY_DEACTIVATION_MESSAGE:
                 self.isAutonomyActivated = False
         elif re.match(forwardToTangoRegex, message):
@@ -130,11 +157,13 @@ class Controller():
         self.clientConnection.closeServerSocket()
         self.tangoConnection.closeServerSocket()
 
+
 def main():
     signal.signal(signal.SIGINT, signalHandler)
     signal.signal(signal.SIGTERM, signalHandler)
     signal.signal(signal.SIGTSTP, signalHandler)
     Controller()
+
 
 if __name__ == '__main__':
     main()
