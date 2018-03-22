@@ -10,14 +10,17 @@ CLIENT_IP_ADDRESS = 'localhost'
 CLIENT_PORT_NUMBER = 9999
 DEFAULT_BUFFER_SIZE = 1024
 
+
 class ClientStatus(enum.Enum):
     HANDSHAKE_INITIALIZED = 'Handshake initialized.'
     HANDSHAKE_SUCCESSFUL = 'Handshake successful.'
+
 
 class ServerStatus(enum.Enum):
     SERVER_INITIALIZED = 'Server initialized.'
     SERVER_LISTENING = 'Server listening.'
     SERVER_SHUTDOWN = 'Server shutdown.'
+
 
 class Connection():
     def __init__(self, serverIPAddress, serverPortNumber, clientIPAddress, \
@@ -111,6 +114,7 @@ class Connection():
 
         self.serverThread.stop = True
         self.handshakeThread.stop = True
+
 
 def main(serverIPAddress = SERVER_IP_ADDRESS, serverPortNumber = SERVER_PORT_NUMBER, \
             clientIPAddress = CLIENT_IP_ADDRESS, clientPortNumber = CLIENT_PORT_NUMBER, \
