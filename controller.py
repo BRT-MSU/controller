@@ -1,11 +1,11 @@
-import connection
-import motor_lib
-
 import enum
 import re
 import atexit
 import signal
 import sys
+
+from connection import Connection
+import motor_lib
 
 
 def signal_handler(signal, frame):
@@ -20,22 +20,20 @@ class ForwardingPrefix(enum.Enum):
     STATUS = '-s'
 
 # Commented out for testing purposes only
-CLIENT_IP_ADDRESS = '192.168.1.2'
-CLIENT_PORT_NUMBER = 1123
+DEFAULT_CLIENT_IP_ADDRESS = '192.168.1.2'
+DEFAULT_CLIENT_PORT_NUMBER = 1123
 
-CONTROLLER_IP_ADDRESS = '0.0.0.0'
-CONTROLLER_TO_CLIENT_PORT_NUMBER = 5813
-CONTROLLER_TO_TANGO_PORT_NUMBER = 2134
+DEFAULT_CONTROLLER_IP_ADDRESS = '0.0.0.0'
+DEFAULT_CONTROLLER_PORT_NUMBER = 5813
+
+DEFAULT_BUFFER_SIZE = 1024
 
 AUTONOMY_ACTIVATION_MESSAGE = 'activate'
 AUTONOMY_DEACTIVATION_MESSAGE = 'deactivate'
 
-forwardToClientRegex = re.compile('^' + str(ForwardingPrefix.CLIENT) + '([\s\S]*)$')
-forwardToControllerRegex = re.compile('^' + str(ForwardingPrefix.CONTROLLER) + '([\s\S]*)$')
-forwardToMotorRegex = re.compile('^' + str(ForwardingPrefix.MOTOR) + '([\s\S]*)$')
-
-debugRegex = re.compile('^' + str(ForwardingPrefix.DEBUG) + '([\s\S]*)$')
-statusRegex = re.compile('^' + str(ForwardingPrefix.STATUS) + '([\s\S]*)$')
+forward_to_client_regex = re.compile('^' + str(ForwardingPrefix.CLIENT) + '([\s\S]*)$')
+forward_to_controller_regex = re.compile('^' + str(ForwardingPrefix.CONTROLLER) + '([\s\S]*)$')
+forward_to_motor_regex = re.compile('^' + str(ForwardingPrefix.MOTOR) + '([\s\S]*)$')
 
 
 class Controller:
@@ -44,10 +42,11 @@ class Controller:
 
         self.motorConnection = motor_lib.MotorConnection()
 
-        self.clientConnection = connection.main(serverIPAddress=CONTROLLER_IP_ADDRESS,
-                                                serverPortNumber=CONTROLLER_TO_CLIENT_PORT_NUMBER,
-                                                clientIPAddress=CLIENT_IP_ADDRESS,
-                                                clientPortNumber=CLIENT_PORT_NUMBER)
+        self.clientConnection = Connection(DEFAULT_CONTROLLER_IP_ADDRESS,
+                                           DEFAULT_CONTROLLER_PORT_NUMBER,
+                                           DEFAULT_CLIENT_IP_ADDRESS,
+                                           DEFAULT_CLIENT_PORT_NUMBER,
+                                           DEFAULT_BUFFER_SIZE)
 
         self.isAutonomyActivated = False
 
@@ -55,26 +54,26 @@ class Controller:
 
     def run(self):
         while True:
-            clientMessage = self.clientConnection.getMessage()
-            if clientMessage is not None:
-                print 'Controller received the following message from the client:', clientMessage
-                self.forward_message(clientMessage)
+            client_message = self.clientConnection.get_message()
+            if client_message is not None:
+                print 'Controller received the following message from the client:', client_message
+                self.forward_message(client_message)
 
     def forward_message(self, message):
         print 'Forwarding message:', message
-        if re.match(forwardToClientRegex, message):
-            self.clientConnection.send(re.match(forwardToClientRegex, message).group(1))
-        elif re.match(forwardToControllerRegex, message):
-            if re.match(forwardToControllerRegex, message).group(1) is AUTONOMY_ACTIVATION_MESSAGE:
+        if re.match(forward_to_client_regex, message):
+            self.clientConnection.send(re.match(forward_to_client_regex, message).group(1))
+        elif re.match(forward_to_controller_regex, message):
+            if re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_ACTIVATION_MESSAGE:
                 self.isAutonomyActivated = True
-            elif re.match(forwardToControllerRegex, message).group(1) is AUTONOMY_DEACTIVATION_MESSAGE:
+            elif re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_DEACTIVATION_MESSAGE:
                 self.isAutonomyActivated = False
-        elif re.match(forwardToMotorRegex, message):
-            self.motorConnection.parse_message(re.match(forwardToMotorRegex, message).group(1))
+        elif re.match(forward_to_motor_regex, message):
+            self.motorConnection.parse_message(re.match(forward_to_motor_regex, message).group(1))
 
     def shutdown(self):
         self.motorConnection.close()
-        self.clientConnection.closeServerSocket()
+        self.clientConnection.close_server_socket()
 
 
 def main():

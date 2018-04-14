@@ -137,7 +137,7 @@ class MotorConnection:
             speed = int(sub_message[1])
             try:
                 if motor_prefix == SubMessagePrefix.LEFT_MOTOR:
-                    self.left_drive(speed)
+                    self.left_drive(-speed)
                 elif motor_prefix == SubMessagePrefix.RIGHT_MOTOR:
                     self.right_drive(speed)
                 elif motor_prefix == SubMessagePrefix.ACTUATOR:

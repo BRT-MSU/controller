@@ -1,64 +1,72 @@
 import argparse
-import socket
 import threading
+import socket
 import Queue
 import enum
 
-SERVER_IP_ADDRESS = '0.0.0.0'
-SERVER_PORT_NUMBER = 8888
-CLIENT_IP_ADDRESS = 'localhost'
-CLIENT_PORT_NUMBER = 9999
+DEFAULT_LOCAL_IP_ADDRESS = '0.0.0.0'
+DEFAULT_LOCAL_PORT_NUMBER = 8888
+
+DEFAULT_REMOTE_IP_ADDRESS = 'localhost'
+DEFAULT_REMOTE_PORT_NUMBER = 9999
+
 DEFAULT_BUFFER_SIZE = 1024
 
 
-class ClientStatus(enum.Enum):
+class LocalStatus(enum.Enum):
+    SERVER_INITIALIZED = 'Local socket initialized.'
+    SERVER_LISTENING = 'Local socket listening.'
+    SERVER_SHUTDOWN = 'Local socket shutdown.'
+
+
+class RemoteStatus(enum.Enum):
     HANDSHAKE_INITIALIZED = 'Handshake initialized.'
     HANDSHAKE_SUCCESSFUL = 'Handshake successful.'
 
 
-class ServerStatus(enum.Enum):
-    SERVER_INITIALIZED = 'Server initialized.'
-    SERVER_LISTENING = 'Server listening.'
-    SERVER_SHUTDOWN = 'Server shutdown.'
+class Connection:
+    def __init__(self, local_ip_address, local_port_number, remote_ip_address,
+                 remote_port_number, buffer_size):
+        self.local_socket = None
+        
+        self.local_ip_address = local_ip_address
+        self.local_port_number = local_port_number
+        
+        self.remote_ip_address = remote_ip_address
+        self.remote_port_number = remote_port_number
+        
+        self.buffer_size = buffer_size
 
+        self.local_queue = Queue.Queue()
 
-class Connection():
-    def __init__(self, serverIPAddress, serverPortNumber, clientIPAddress, \
-                 clientPortNumber, bufferSize):
-        self.serverIPAddress = serverIPAddress
-        self.serverPortNumber = serverPortNumber
-        self.clientIPAddress = clientIPAddress
-        self.clientPortNumber = clientPortNumber
-        self.bufferSize = bufferSize
+        self.local_status = None
+        self.local_thread = threading.Thread(name='localThread',
+                                             target=self.open_local_socket)
+        self.local_thread.daemon = True
+        self.local_thread.start()
 
-        self.serverQueue = Queue.Queue()
+        self.remote_status = None
+        self.handshake_thread = threading.Thread(name='handshakeThread',
+                                                 target=self.initiate_handshake)
+        self.handshake_thread.daemon = True
+        self.handshake_thread.start()
 
-        self.serverStatus = None
-        self.serverThread = threading.Thread(name = 'serverThread', target = self.openServerSocket)
-        self.serverThread.daemon = True
-        self.serverThread.start()
-
-        self.clientStatus = None
-        self.handshakeThread = threading.Thread(name = 'handshakeThread', target = self.initiateHandShake)
-        self.handshakeThread.daemon = True
-        self.handshakeThread.start()
-
-    def initiateHandShake(self):
-        self.clientStatus = ClientStatus.HANDSHAKE_INITIALIZED
-        print self.clientStatus
+    def initiate_handshake(self):
+        self.remote_status = RemoteStatus.HANDSHAKE_INITIALIZED
+        print self.remote_status
         while True:
-            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            remote_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
-                clientSocket.connect((self.clientIPAddress, self.clientPortNumber))
-                clientSocket.send('SYN\n')
+                remote_socket.connect((self.remote_ip_address, self.remote_port_number))
+                remote_socket.send('SYN\n')
 
-                if clientSocket.recv(self.bufferSize) == 'ACK\n':
-                    clientSocket.send('SYN-ACK\n')
-                    clientSocket.shutdown(socket.SHUT_WR)
-                    clientSocket.close()
-                    self.clientStatus = ClientStatus.HANDSHAKE_SUCCESSFUL
-                    print self.clientStatus
+                if remote_socket.recv(self.buffer_size) == 'ACK\n':
+                    remote_socket.send('SYN-ACK\n')
+                    remote_socket.shutdown(socket.SHUT_WR)
+                    remote_socket.close()
+                    self.remote_status = RemoteStatus.HANDSHAKE_SUCCESSFUL
+                    print self.remote_status
                 else:
                     pass
                 break
@@ -66,85 +74,83 @@ class Connection():
                 continue
 
     def send(self, message):
-        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        remote_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            clientSocket.connect((self.clientIPAddress, self.clientPortNumber))
-            print 'Client sent:', message
-            clientSocket.send(message + '\n')
-            clientSocket.shutdown(socket.SHUT_WR)
-            clientSocket.close()
+            remote_socket.connect((self.remote_ip_address, self.remote_port_number))
+            print 'Remote socket sent:', message
+            remote_socket.send(message + '\n')
+            remote_socket.shutdown(socket.SHUT_WR)
+            remote_socket.close()
         except socket.error:
             pass
 
-    def getMessage(self):
-        if not self.serverQueue.empty():
-            return self.serverQueue.get()
+    def get_message(self):
+        if not self.local_queue.empty():
+            return self.local_queue.get()
         else:
             return None
 
-    def openServerSocket(self):
-        self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    def open_local_socket(self):
+        self.local_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.local_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        self.serverSocket.bind((self.serverIPAddress, self.serverPortNumber))
-        self.serverSocket.listen(1)
-        self.serverStatus = ServerStatus.SERVER_LISTENING
-        print self.serverStatus
+        self.local_socket.bind((self.local_ip_address, self.local_port_number))
+        self.local_socket.listen(1)
+        self.local_status = LocalStatus.SERVER_LISTENING
+        print self.local_status
         while True:
             try:
-                connection, address = self.serverSocket.accept()
-                message = connection.recv(self.bufferSize)
+                connection, address = self.local_socket.accept()
+                message = connection.recv(self.buffer_size)
                 if message == 'SYN\n':
                     connection.send('ACK\n')
                 else:
-                    print 'Server received:', message.rstrip()
-                    self.serverQueue.put(message)
+                    print 'Local socket received:', message.rstrip()
+                    self.local_queue.put(message)
             except socket.error:
                 break
 
-    def closeServerSocket(self):
+    def close_server_socket(self):
         try:
-            self.serverSocket.shutdown(socket.SHUT_RD)
-            self.serverSocket.close()
-            self.serverStatus = ServerStatus.SERVER_SHUTDOWN
-            print self.serverStatus
+            self.local_socket.shutdown(socket.SHUT_RD)
+            self.local_socket.close()
+            self.local_status = LocalStatus.SERVER_SHUTDOWN
+            print self.local_status
         except socket.error:
             pass
 
-        self.serverThread.stop = True
-        self.handshakeThread.stop = True
+        self.local_thread.stop = True
+        self.handshake_thread.stop = True
 
 
-def main(serverIPAddress = SERVER_IP_ADDRESS, serverPortNumber = SERVER_PORT_NUMBER, \
-            clientIPAddress = CLIENT_IP_ADDRESS, clientPortNumber = CLIENT_PORT_NUMBER, \
-            bufferSize = DEFAULT_BUFFER_SIZE):
-    return Connection(serverIPAddress, serverPortNumber, clientIPAddress, clientPortNumber, bufferSize)
+def main(local_ip_address, local_port_number,
+         remote_ip_address, remote_port_number,
+         buffer_size):
+    return Connection(local_ip_address, local_port_number,
+                      remote_ip_address, remote_port_number,
+                      buffer_size)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-sip', '--serverIPAddress', help='server IP address argument', \
-                        required=False, default=SERVER_IP_ADDRESS)
-    parser.add_argument('-spn', '--serverPortNumber', help='server port number argument', \
-                        required=False, default=str(SERVER_PORT_NUMBER))
-    parser.add_argument('-cip', '--clientIPAddress', help = 'client IP address argument', \
-                        required = False, default = CLIENT_IP_ADDRESS)
-    parser.add_argument('-cpn', '--clientPortNumber', help = 'client port number argument', \
-                        required = False, default = str(CLIENT_PORT_NUMBER))
-    parser.add_argument('-bs', '--bufferSize', help='buffer size argument', \
-                        required=False, default=str(DEFAULT_BUFFER_SIZE))
+    parser.add_argument('-lip', '--localIPAddress', help='local IP address',
+                        required=False, default=DEFAULT_LOCAL_IP_ADDRESS)
+    parser.add_argument('-lpn', '--localPortNumber', help='local port number',
+                        required=False, type=int, default=str(DEFAULT_LOCAL_PORT_NUMBER))
+    parser.add_argument('-rip', '--remoteIPAddress', help='remote IP address',
+                        required=False, default=DEFAULT_REMOTE_IP_ADDRESS)
+    parser.add_argument('-rpn', '--remotePortNumber', help='remote port number',
+                        required=False, type=int, default=str(DEFAULT_REMOTE_PORT_NUMBER))
+    parser.add_argument('-bs', '--buffer_size', help='buffer size',
+                        required=False, type=int, default=str(DEFAULT_BUFFER_SIZE))
     args = parser.parse_args()
 
-    serverIPAddress = args.serverIPAddress
-    serverPortNumber = int(args.serverPortNumber)
-    clientIPAddress = args.clientIPAddress
-    clientPortNumber = int(args.clientPortNumber)
-    bufferSize = int(args.bufferSize)
+    print 'localIpAddress:', args.localIPAddress
+    print 'localPortNumber:', args.localPortNumber
+    print 'localIpAddress:', args.remoteIPAddress
+    print 'localPortNumber:', args.remotePortNumber
+    print 'buffer_size:', args.buffer_size
 
-    print 'serverIpAddress:', serverIPAddress
-    print 'serverPortNumber:', serverPortNumber
-    print 'clientIpAddress:', clientIPAddress
-    print 'clientPortNumber:', clientPortNumber
-    print 'bufferSize:', bufferSize
-
-    main(serverIPAddress, serverPortNumber, clientIPAddress, clientPortNumber, bufferSize)
+    main(args.localIPAddress, args.localPortNumber,
+         args.remoteIPAddress, args.remotePortNumber,
+         args.buffer_size)
