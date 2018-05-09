@@ -69,7 +69,8 @@ class Controller:
             elif re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_DEACTIVATION_MESSAGE:
                 self.isAutonomyActivated = False
         elif re.match(forward_to_motor_regex, message):
-            self.motorConnection.parse_message(re.match(forward_to_motor_regex, message).group(1))
+            motor_message = re.match(forward_to_motor_regex, message).group(1)
+            self.motorConnection.parse_message(motor_message)
 
     def shutdown(self):
         self.motorConnection.close()

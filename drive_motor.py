@@ -4,31 +4,43 @@ import serial
 
 
 class DriveMotor:
-    def __init__(self, port_name):
+    def __init__(self, port_name, address):
         self.serial_connection = serial.Serial(port=port_name,
                                                baudrate=38400,
                                                timeout=0.5,
                                                xonxoff=True)
+
+        self.address = address
+
+        self.serial_connection.write('@~' + str(self.address) + '\r')
+        sleep(0.05)
+
+        self.serial_connection.write('@' + str(self.address) + 'D\r')
+        sleep(0.05)
 
     def drive(self, rpm):
         if abs(rpm) > 4000:
             return -1
 
         if abs(rpm) < 100:
-            self.serial_connection.write('@#.\r')
+            self.serial_connection.write('@' + str(self.address) + '.\r')
+            sleep(0.05)
+
             return 0
 
         if rpm >= 100:
-            self.serial_connection.write('@#+\r')
+            self.serial_connection.write('@' + str(self.address) + '+\r')
             sleep(0.05)
         else:
-            self.serial_connection.write('@#-\r')
+            self.serial_connection.write('@' + str(self.address) + '-\r')
             sleep(0.05)
 
-        self.serial_connection.write('@#M' + str(rpm) + '\r')
-        sleep(0.005)
+        self.serial_connection.write('@' + str(self.address) + 'M'
+                                     + str(abs(rpm)) + '\r')
+        sleep(0.05)
 
-        self.serial_connection.write('@#S\r')
+        self.serial_connection.write('@' + str(self.address) + 'S\r')
+        sleep(0.05)
 
         return 0
 
@@ -37,17 +49,7 @@ class DriveMotor:
 
 
 def main(port_name):
-    drive_motor = DriveMotor(port_name)
-
-    drive_motor.drive(2000)
-
-    sleep(30)
-
-    drive_motor.drive(-2000)
-
-    sleep(30)
-
-    drive_motor.drive(0)
+    DriveMotor(port_name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
