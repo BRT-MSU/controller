@@ -141,13 +141,13 @@ class MotorConnection:
             try:
                 if motor_prefix == SubMessagePrefix.LEFT_MOTOR:
                     left_motor_thread = Thread(name='leftMotorThread',
-                                               target=self.left_drive(speed))
+                                               target=self.left_drive(-speed))
                     threads.append(left_motor_thread)
                     left_motor_thread.start()
 
                 elif motor_prefix == SubMessagePrefix.RIGHT_MOTOR:
                     right_motor_thread = Thread(name='rightMotorThread',
-                                                target=self.right_drive(-speed))
+                                                target=self.right_drive(speed))
                     threads.append(right_motor_thread)
                     right_motor_thread.start()
 
