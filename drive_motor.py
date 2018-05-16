@@ -108,8 +108,9 @@ class DriveMotor:
         self.serial_connection.close()
 
 
-def main(port_name, integrator_constant,
-         gain_constant, proportional_constant,
+def main(port_name, gain_constant,
+         integrator_constant,
+         proportional_constant,
          initial_value_constant):
     drive_motor = DriveMotor(port_name)
 
