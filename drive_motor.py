@@ -56,29 +56,41 @@ class DriveMotor:
 
         return 0
 
-    def set_proportional_constant(self, constant):
+    def set_gain_constant(self, constant):
         self.serial_connection.write('@' + str(self.address)
                                      + 'KG' + str(constant) + '\r')
         sleep(DEFAULT_SERIAL_DELAY)
 
         self.serial_connection.write('@' + str(self.address) +
-                                        'VKG\r')
+                                     'VKG\r')
         sleep(DEFAULT_SERIAL_DELAY)
         response = self.serial_connection.read(10)
         print 'motor ' + str(self.address) \
-              +  ' proportional constant (kg) set to: ' + response
+              + ' gain constant (kg) set to: ' + response
 
     def set_integrator_constant(self, constant):
+        self.serial_connection.write('@' + str(self.address)
+                                     + 'KI' + str(constant) + '\r')
+        sleep(DEFAULT_SERIAL_DELAY)
+
+        self.serial_connection.write('@' + str(self.address) +
+                                        'VKI\r')
+        sleep(DEFAULT_SERIAL_DELAY)
+        response = self.serial_connection.read(10)
+        print 'motor ' + str(self.address) \
+              +  ' integrator constant (ki) set to: ' + response
+
+    def set_proportional_constant(self, constant):
         self.serial_connection.write('@' + str(self.address)
                                      + 'KP' + str(constant) + '\r')
         sleep(DEFAULT_SERIAL_DELAY)
 
         self.serial_connection.write('@' + str(self.address) +
-                                        'VKP\r')
+                                     'VKP\r')
         sleep(DEFAULT_SERIAL_DELAY)
         response = self.serial_connection.read(10)
         print 'motor ' + str(self.address) \
-              +  ' integrator constant (kp) set to: ' + response
+              + ' proportional constant (kp) set to: ' + response
 
     def set_initial_value_constant(self, constant):
         self.serial_connection.write('@' + str(self.address)
@@ -96,15 +108,19 @@ class DriveMotor:
         self.serial_connection.close()
 
 
-def main(port_name, proportional_constant,
-         integrator_constant, initial_value_constant):
+def main(port_name, integrator_constant,
+         gain_constant, proportional_constant,
+         initial_value_constant):
     drive_motor = DriveMotor(port_name)
 
-    if proportional_constant is not None:
-        drive_motor.set_proportional_constant(proportional_constant)
+    if gain_constant is not None:
+        drive_motor.set_gain_constant(gain_constant)
 
     if integrator_constant is not None:
         drive_motor.set_integrator_constant(integrator_constant)
+
+    if proportional_constant is not None:
+        drive_motor.set_proportional_constant(proportional_constant)
 
     if initial_value_constant is not None:
         drive_motor.set_initial_value_constant(initial_value_constant)
@@ -116,11 +132,14 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--portName',
                         help='port name',
                         required=True)
-    parser.add_argument('-kg', '--proportionalConstant',
-                        help='proportional constant',
+    parser.add_argument('-kg', '--gainConstant',
+                        help='gain constant',
                         required=False)
-    parser.add_argument('-kp', '--integratorConstant',
+    parser.add_argument('-ki', '--integratorConstant',
                         help='integrator constant',
+                        required=False)
+    parser.add_argument('-kp', '--proportionalConstant',
+                        help='proportional constant',
                         required=False)
     parser.add_argument('-iv', '--initialValueConstant',
                         help='initial value constant',
@@ -128,5 +147,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args.portName, args.proportionalConstant,
-         args.integratorConstant, args.initialValueConstant)
+    main(args.portName, args.gainConstant,
+         args.integratorConstant, args.proportionalConstant,
+         args.initialValueConstant)
