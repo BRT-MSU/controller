@@ -1,13 +1,14 @@
 import re
 import enum
 import time
+from threading import Thread
 from roboclaw import Roboclaw
 from drive_motor import DriveMotor
 
-DEFAULT_RIGHT_DRIVE_MOTOR_ADDRESS = '/dev/ttyUSB0'
-DEFAULT_LEFT_DRIVE_MOTOR_ADDRESS = '/dev/ttyUSB1'
+DEFAULT_RIGHT_DRIVE_MOTOR_PORT = '/dev/ttyUSB0'
+DEFAULT_LEFT_DRIVE_MOTOR_PORT = '/dev/ttyUSB1'
 
-DEFAULT_TIME_TO_DELAY_MOTOR = 20  # 20 milliseconds
+DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # 20 milliseconds
 
 MAX_MOTOR_SPEED = 100  # max speed from client
 MAX_MOTOR_POWER = 120  # max power to bucket motor controller
@@ -34,8 +35,8 @@ class RoboclawStatus(enum.Enum):
 class MotorConnection:
     def __init__(self, roboclaw_port='/dev/roboclaw',
                  baud_rate=115200, bucket_address=0x80):
-        self.right_motor = DriveMotor(DEFAULT_RIGHT_DRIVE_MOTOR_ADDRESS)
-        self.left_motor = DriveMotor(DEFAULT_LEFT_DRIVE_MOTOR_ADDRESS)
+        self.right_motor = DriveMotor(DEFAULT_RIGHT_DRIVE_MOTOR_PORT, 0)
+        self.left_motor = DriveMotor(DEFAULT_LEFT_DRIVE_MOTOR_PORT, 1)
 
         self.roboclaw = Roboclaw(roboclaw_port, baud_rate)
         
@@ -110,9 +111,9 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print 'Actuator motor at power:', power
         if power >= 0:
-            self.roboclaw.ForwardM1(self.bucketAddress, power)
+            self.roboclaw.BackwardM1(self.bucketAddress, power)
         else:
-            self.roboclaw.BackwardM1(self.bucketAddress, abs(power))
+            self.roboclaw.ForwardM1(self.bucketAddress, abs(power))
 
     def bucket_rotate(self, speed):
         if not self.are_speed_directions_equal(speed, self.bucket_motor_speed):
@@ -125,25 +126,41 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print 'Bucket motor at power:', power
         if power >= 0:
-            self.roboclaw.ForwardM2(self.bucketAddress, power)
+            self.roboclaw.BackwardM2(self.bucketAddress, power)
         else:
-            self.roboclaw.BackwardM2(self.bucketAddress, abs(power))
+            self.roboclaw.ForwardM2(self.bucketAddress, abs(power))
 
     def parse_message(self, message):
         sub_messages = motorMessageRegex.findall(message)
+
+        threads = []
 
         for sub_message in sub_messages:
             motor_prefix = sub_message[0]
             speed = int(sub_message[1])
             try:
                 if motor_prefix == SubMessagePrefix.LEFT_MOTOR:
-                    self.left_drive(-speed)
+                    left_motor_thread = Thread(name='leftMotorThread',
+                                               target=self.left_drive(-speed))
+                    threads.append(left_motor_thread)
+                    left_motor_thread.start()
+
                 elif motor_prefix == SubMessagePrefix.RIGHT_MOTOR:
-                    self.right_drive(speed)
+                    right_motor_thread = Thread(name='rightMotorThread',
+                                                target=self.right_drive(speed))
+                    threads.append(right_motor_thread)
+                    right_motor_thread.start()
+
                 elif motor_prefix == SubMessagePrefix.ACTUATOR:
-                    self.bucket_actuate(speed)
+                    actuator_thread = Thread(name='actuatorThread',
+                                             target=self.bucket_actuate(speed))
+                    threads.append(actuator_thread)
+                    actuator_thread.start()
                 elif motor_prefix == SubMessagePrefix.BUCKET:
-                    self.bucket_rotate(speed)
+                    bucket_thread = Thread(name='bucketThread',
+                                           target=self.bucket_rotate(speed))
+                    threads.append(bucket_thread)
+                    bucket_thread.start()
                 else:
                     print 'MotorPrefix "', motor_prefix, '" unrecognized.'
             except AttributeError:
@@ -153,6 +170,9 @@ class MotorConnection:
                     print 'Roboclaw connected...retrying command'
                     self.status = RoboclawStatus.CONNECTED
                     self.parse_message(message)
+
+        for thread in threads:
+            thread.join()
 
     def close(self):
         print 'Closed connection:', self.roboclaw.Close()
