@@ -40,7 +40,7 @@ class Controller:
     def __init__(self):
         atexit.register(self.shutdown)
 
-        self.motorConnection = motor_lib.MotorConnection()
+        self.motorConnection = motor_lib.MotorConnection(left_drive_address=0x80, right_drive_address=0x80)
 
         self.clientConnection = Connection(DEFAULT_CONTROLLER_IP_ADDRESS,
                                            DEFAULT_CONTROLLER_PORT_NUMBER,

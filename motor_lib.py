@@ -3,10 +3,6 @@ import enum
 import time
 from threading import Thread
 from roboclaw import Roboclaw
-from drive_motor import DriveMotor
-
-DEFAULT_RIGHT_DRIVE_MOTOR_PORT = '/dev/ttyUSB0'
-DEFAULT_LEFT_DRIVE_MOTOR_PORT = '/dev/ttyUSB1'
 
 DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # 20 milliseconds
 
@@ -26,17 +22,19 @@ class SubMessagePrefix(enum.Enum):
     BUCKET = 'b'
     SERVO = 's'
 
-
 class RoboclawStatus(enum.Enum):
     CONNECTED = 'Roboclaw Connected'
     DISCONNECTED = 'Roboclaw Disconnected'
 
-
+"""
+    To set /dev/roboclaw using udev rules, follow thise guide:
+    https://www.linux.com/learn/build-road-raspberry-pi-robot-part-2
+"""
 class MotorConnection:
     def __init__(self, roboclaw_port='/dev/roboclaw',
-                 baud_rate=115200, bucket_address=0x80):
-        self.right_motor = DriveMotor(DEFAULT_RIGHT_DRIVE_MOTOR_PORT, 0)
-        self.left_motor = DriveMotor(DEFAULT_LEFT_DRIVE_MOTOR_PORT, 1)
+                 baud_rate=115200, 
+                 left_drive_address=0x80, right_drive_address=0x80, 
+                 actuator_address=0x82, dig_address=0x83):
 
         self.roboclaw = Roboclaw(roboclaw_port, baud_rate)
         
@@ -48,7 +46,10 @@ class MotorConnection:
         print self.status
         print 'MotorConnection initialized.'
 
-        self.bucketAddress = bucket_address
+        self.left_drive_address = left_drive_address
+        self.right_drive_address = right_drive_address
+        self.actuator_address = actuator_address
+        self.dig_address = dig_address
 
         self.left_motor_speed = 0
         self.right_motor_speed = 0
@@ -87,18 +88,34 @@ class MotorConnection:
             return power
 
     def left_drive(self, speed):
-        print 'Left motor at speed:', speed, '%'
+        if not self.are_speed_directions_equal(speed, self.left_motor_speed):
+            print('Left motor speed changed direction.')
+            self.roboclaw.ForwardM2(self.left_drive_address, 0)
+            time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
+
+        print('Left motor at speed:', speed, '%')
         self.left_motor_speed = speed
-        rpm = self.convert_speed_to_rpm(speed)
-        print 'Left motor at rpm:', rpm
-        self.left_motor.drive(rpm)
+        power = self.convert_speed_to_power(speed)
+        print('Left motor at power:', power)
+        if power >= 0:
+            self.roboclaw.BackwardM2(self.left_motor_address, power)
+        else:
+            self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
 
     def right_drive(self, speed):
-        print 'Right motor at speed:', speed, '%'
+        if not self.are_speed_directions_equal(speed, self.right_motor_speed):
+            print('Right motor speed changed direction.')
+            self.roboclaw.ForwardM1(self.right_drive_address, 0)
+            time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
+
+        print('Right motor at speed:', speed, '%')
         self.right_motor_speed = speed
-        rpm = self.convert_speed_to_rpm(speed)
-        print 'Right motor at rpm:', rpm
-        self.right_motor.drive(rpm)
+        power = self.convert_speed_to_power(speed)
+        print('Right motor at power:', power)
+        if power >= 0:
+            self.roboclaw.BackwardM1(self.right_motor_address, power)
+        else:
+            self.roboclaw.ForwardM1(self.right_motor_address, abs(power))
 
     def bucket_actuate(self, speed):
         if not self.are_speed_directions_equal(speed, self.actuator_motor_speed):
