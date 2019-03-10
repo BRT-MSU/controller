@@ -1,0 +1,1 @@
+ACTION=="add", ATTRS{idProduct}=="2404", ATTRS{idVendor}=="03eb", SYMLINK+="roboclaw"
