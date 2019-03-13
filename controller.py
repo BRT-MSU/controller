@@ -18,9 +18,10 @@ class ForwardingPrefix(enum.Enum):
     CONTROLLER = '-p'
     DEBUG = '-d'
     STATUS = '-s'
+    OBJECT = '-o'
 
 # Commented out for testing purposes only
-DEFAULT_CLIENT_IP_ADDRESS = '192.168.1.2'
+DEFAULT_CLIENT_IP_ADDRESS = '10.152.181.143'
 DEFAULT_CLIENT_PORT_NUMBER = 1123
 
 DEFAULT_CONTROLLER_IP_ADDRESS = '0.0.0.0'
@@ -56,11 +57,11 @@ class Controller:
         while True:
             client_message = self.clientConnection.get_message()
             if client_message is not None:
-                print 'Controller received the following message from the client:', client_message
+                print('Controller received the following message from the client:', client_message)
                 self.forward_message(client_message)
 
     def forward_message(self, message):
-        print 'Forwarding message:', message
+        print ('Forwarding message:', message)
         if re.match(forward_to_client_regex, message):
             self.clientConnection.send(re.match(forward_to_client_regex, message).group(1))
         elif re.match(forward_to_controller_regex, message):
@@ -68,8 +69,8 @@ class Controller:
                 self.isAutonomyActivated = True
             elif re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_DEACTIVATION_MESSAGE:
                 self.isAutonomyActivated = False
-        elif re.match(forward_to_motor_regex, message):
-            motor_message = re.match(forward_to_motor_regex, message).group(1)
+        elif re.match("^-m([\s\S]*)$", message):
+            motor_message = re.match("^-m([\s\S]*)$", message).group(1)
             self.motorConnection.parse_message(motor_message)
 
     def shutdown(self):

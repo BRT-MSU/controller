@@ -43,8 +43,8 @@ class MotorConnection:
         else:
             self.status = RoboclawStatus.DISCONNECTED
             
-        print self.status
-        print 'MotorConnection initialized.'
+        print(self.status)
+        print('MotorConnection initialized.')
 
         self.left_drive_address = left_drive_address
         self.right_drive_address = right_drive_address
@@ -90,7 +90,7 @@ class MotorConnection:
     def left_drive(self, speed):
         if not self.are_speed_directions_equal(speed, self.left_motor_speed):
             print('Left motor speed changed direction.')
-            self.roboclaw.ForwardM2(self.left_drive_address, 0)
+            self.roboclaw.ForwardM2(0x80, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print('Left motor at speed:', speed, '%')
@@ -98,14 +98,17 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print('Left motor at power:', power)
         if power >= 0:
-            self.roboclaw.BackwardM2(self.left_motor_address, power)
+            self.roboclaw.BackwardM2(0x80, power)
+            #self.roboclaw.BackwardM2(self.left_motor_address, power)
         else:
-            self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
+            self.roboclaw.ForwardM2(0x80, abs(power))
+
+            #self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
 
     def right_drive(self, speed):
         if not self.are_speed_directions_equal(speed, self.right_motor_speed):
-            print('Right motor speed changed direction.')
-            self.roboclaw.ForwardM1(self.right_drive_address, 0)
+            print('Left motor speed changed direction.')
+            self.roboclaw.ForwardM1(0x80, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print('Right motor at speed:', speed, '%')
@@ -113,20 +116,23 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print('Right motor at power:', power)
         if power >= 0:
-            self.roboclaw.BackwardM1(self.right_motor_address, power)
+            self.roboclaw.BackwardM1(0x80, power)
+            #self.roboclaw.BackwardM2(self.left_motor_address, power)
         else:
-            self.roboclaw.ForwardM1(self.right_motor_address, abs(power))
+            self.roboclaw.ForwardM1(0x80, abs(power))
+
+            #self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
 
     def bucket_actuate(self, speed):
         if not self.are_speed_directions_equal(speed, self.actuator_motor_speed):
-            print 'Actuator motor speed changed direction.'
+            print('Actuator motor speed changed direction.')
             self.roboclaw.ForwardM1(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Actuator motor at speed:', speed, '%'
+        print('Actuator motor at speed:', speed, '%')
         self.actuator_motor_speed = speed
         power = self.convert_speed_to_power(speed)
-        print 'Actuator motor at power:', power
+        print('Actuator motor at power:', power)
         if power >= 0:
             self.roboclaw.BackwardM1(self.bucketAddress, power)
         else:
@@ -134,14 +140,14 @@ class MotorConnection:
 
     def bucket_rotate(self, speed):
         if not self.are_speed_directions_equal(speed, self.bucket_motor_speed):
-            print 'Bucket motor speed changed direction.'
+            print('Bucket motor speed changed direction.')
             self.roboclaw.ForwardM2(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
-        print 'Bucket motor at speed:', speed, '%'
+        print('Bucket motor at speed:', speed, '%')
         self.bucket_motor_speed = speed
         power = self.convert_speed_to_power(speed)
-        print 'Bucket motor at power:', power
+        print('Bucket motor at power:', power)
         if power >= 0:
             self.roboclaw.BackwardM2(self.bucketAddress, power)
         else:
@@ -179,17 +185,17 @@ class MotorConnection:
                     threads.append(bucket_thread)
                     bucket_thread.start()
                 else:
-                    print 'MotorPrefix "', motor_prefix, '" unrecognized.'
+                    print('MotorPrefix "', motor_prefix, '" unrecognized.')
             except AttributeError:
                 self.status = RoboclawStatus.DISCONNECTED
-                print 'Roboclaw disconnected...retrying connection'
+                print('Roboclaw disconnected...retrying connection')
                 if self.roboclaw.Open():
-                    print 'Roboclaw connected...retrying command'
+                    print('Roboclaw connected...retrying command')
                     self.status = RoboclawStatus.CONNECTED
-                    self.parse_message(message)
+                    #self.parse_message(message)
 
         for thread in threads:
             thread.join()
 
     def close(self):
-        print 'Closed connection:', self.roboclaw.Close()
+        print('Closed connection:', self.roboclaw.Close())
