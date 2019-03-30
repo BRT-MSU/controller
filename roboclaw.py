@@ -113,19 +113,19 @@ class Roboclaw:
 		
 	def crc_update(self,data):
 		self._crc = self._crc ^ (data << 8)
-		for bit in range(0, 8):
-			if (self._crc&0x8000)  == 0x8000:
-				self._crc = ((self._crc << 1) ^ 0x1021)
-			else:
-				self._crc = self._crc << 1
+
+		if (self._crc&0x8000) == 0x8000:
+			self._crc = ((self._crc << 1) ^ 0x1021)
+		else:
+			self._crc = self._crc << 1
 		return
 
 	def _sendcommand(self,address,command):
-		# self.crc_clear()
-		# self.crc_update(address)
-		self._port.write(address)
-		# self.crc_update(command)
-		self._port.write(command)
+		self.crc_clear()
+		self.crc_update(address)
+		self._port.write(chr(address))
+		self.crc_update(command)
+		self._port.write(chr(command))
 		return
 
 	def _readchecksumword(self):
