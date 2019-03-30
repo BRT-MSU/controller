@@ -153,7 +153,3 @@ class Roboclaw:
     def BackwardM2(self, address, val):
         self.build_command(address, self.Cmd.M2BACKWARD, [val])
         self.send_command()
-
-rc = Roboclaw("COM16", 115200)
-rc.build_command(0x80, 0, [0x0])
-rc.send_command()
