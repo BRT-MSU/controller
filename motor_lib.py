@@ -2,7 +2,7 @@ import re
 import enum
 import time
 from threading import Thread
-from roboclaw import Roboclaw
+from roboclaw3 import Roboclaw
 
 DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # 20 milliseconds
 
