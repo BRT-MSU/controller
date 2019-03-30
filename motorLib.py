@@ -18,7 +18,7 @@ class MotorLib:
         self.M1 += speed
         self.setMotors()
 
-    def left(self, speed):
+    def right(self, speed):
         self.M2 += speed
         self.setMotors()
 
