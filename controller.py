@@ -55,14 +55,14 @@ class Controller:
 
     def run(self):
         while True:
-            client_message = self.clientConnection.get_message()
+            client_message = str(self.clientConnection.get_message())
             if client_message is not None:
                 print('Controller received the following message from the client:', client_message)
                 self.forward_message(client_message)
 
     def forward_message(self, message):
-        print ('Forwarding message:', message)
-        if re.match(forward_to_client_regex, message):
+        print('Forwarding message:', message)
+        if re.match(forward_to_client_regex,message):
             self.clientConnection.send(re.match(forward_to_client_regex, message).group(1))
         elif re.match(forward_to_controller_regex, message):
             if re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_ACTIVATION_MESSAGE:
