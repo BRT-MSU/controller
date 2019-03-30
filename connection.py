@@ -82,7 +82,7 @@ class Connection:
         try:
             remote_socket.connect((self.remote_ip_address, self.remote_port_number))
             print('Remote socket sent:', message)
-            remote_socket.send(message + '\n')
+            remote_socket.send(bytes(message + '\n', "utf8"))
             remote_socket.shutdown(socket.SHUT_WR)
             remote_socket.close()
         except socket.error:
