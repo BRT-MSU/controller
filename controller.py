@@ -21,7 +21,7 @@ class ForwardingPrefix(enum.Enum):
     OBJECT = '-o'
 
 # Commented out for testing purposes only
-DEFAULT_CLIENT_IP_ADDRESS = '10.152.181.143'
+DEFAULT_CLIENT_IP_ADDRESS = '10.200.32.37'
 DEFAULT_CLIENT_PORT_NUMBER = 1123
 
 DEFAULT_CONTROLLER_IP_ADDRESS = '0.0.0.0'
