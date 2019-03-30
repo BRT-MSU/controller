@@ -138,6 +138,13 @@ class Roboclaw:
         self._port = serial.Serial(self.comport, self.rate, timeout=self.timeout)
         return self._port.isOpen()
 
+    def Close(self):
+        try:
+            self._port.close()
+        except:
+            return False
+        return True
+
     def ForwardM1(self, address, val):
         self.build_command(address, self.Cmd.M1FORWARD, [val])
         self.send_command()
