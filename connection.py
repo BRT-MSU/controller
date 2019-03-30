@@ -62,10 +62,10 @@ class Connection:
             remote_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 remote_socket.connect((self.remote_ip_address, self.remote_port_number))
-                remote_socket.send(bytes('SYN\n'))
+                remote_socket.send(bytes('SYN\n', "utf8"))
 
                 if remote_socket.recv(self.buffer_size) == 'ACK\n':
-                    remote_socket.send(bytes('SYN-ACK\n'))
+                    remote_socket.send(bytes('SYN-ACK\n', "utf8"))
                     remote_socket.shutdown(socket.SHUT_WR)
                     remote_socket.close()
                     self.remote_status = RemoteStatus.HANDSHAKE_SUCCESSFUL
