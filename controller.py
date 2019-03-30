@@ -55,8 +55,9 @@ class Controller:
 
     def run(self):
         while True:
-            client_message = str(self.clientConnection.get_message())
+            client_message = self.clientConnection.get_message()
             if client_message is not None:
+                client_message = str(client_message)
                 print('Controller received the following message from the client:', client_message)
                 self.forward_message(client_message)
 
