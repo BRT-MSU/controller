@@ -111,7 +111,8 @@ class Roboclaw:
 		self._crc = 0
 		return
 		
-	def crc_update(self,data):
+	def crc_update(self, data):
+		data = int(data)
 		self._crc = self._crc ^ (data << 8)
 		for bit in range(0, 8):
 			if (self._crc&0x8000)  == 0x8000:
