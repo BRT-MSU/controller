@@ -64,7 +64,7 @@ class Connection:
                 remote_socket.connect((self.remote_ip_address, self.remote_port_number))
                 remote_socket.send(bytes('SYN\n', "utf8"))
 
-                if remote_socket.recv(self.buffer_size) == 'ACK\n':
+                if remote_socket.recv(self.buffer_size) == bytes('ACK\n', "utf8"):
                     remote_socket.send(bytes('SYN-ACK\n', "utf8"))
                     remote_socket.shutdown(socket.SHUT_WR)
                     remote_socket.close()
@@ -106,10 +106,10 @@ class Connection:
             try:
                 connection, address = self.local_socket.accept()
                 message = connection.recv(self.buffer_size)
-                if message == 'SYN\n':
-                    connection.send('ACK\n')
+                if message == bytes('SYN\n', "utf8"):
+                    connection.send(bytes('ACK\n', "utf8"))
                 else:
-                    print('Local socket received:', message.rstrip())
+                    print('Local socket received:', message.decode('utf-8').rstrip())
                     self.local_queue.put(message)
             except socket.error:
                 break

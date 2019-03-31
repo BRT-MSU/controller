@@ -21,7 +21,7 @@ class ForwardingPrefix(enum.Enum):
     OBJECT = '-o'
 
 # Commented out for testing purposes only
-DEFAULT_CLIENT_IP_ADDRESS = '10.200.32.37'
+DEFAULT_CLIENT_IP_ADDRESS = '10.152.173.226'
 DEFAULT_CLIENT_PORT_NUMBER = 1123
 
 DEFAULT_CONTROLLER_IP_ADDRESS = '0.0.0.0'
@@ -57,7 +57,7 @@ class Controller:
         while True:
             client_message = self.clientConnection.get_message()
             if client_message is not None:
-                client_message = str(client_message)
+                client_message = client_message.decode('utf-8')
                 print('Controller received the following message from the client:', client_message)
                 self.forward_message(client_message)
 
