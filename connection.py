@@ -107,7 +107,7 @@ class Connection:
                 connection, address = self.local_socket.accept()
                 message = connection.recv(self.buffer_size)
                 if message == 'SYN\n':
-                    connection.send('ACK\n')
+                    connection.send(bytes('ACK\n', "utf8"))
                 else:
                     print('Local socket received:', message.rstrip())
                     self.local_queue.put(message)

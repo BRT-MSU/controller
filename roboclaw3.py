@@ -160,3 +160,5 @@ class Roboclaw:
     def BackwardM2(self, address, val):
         self.build_command(address, self.Cmd.M2BACKWARD, [val])
         self.send_command()
+
+    def getCurrents(self):
