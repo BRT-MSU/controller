@@ -63,17 +63,18 @@ class Controller:
 
     def forward_message(self, message):
         print('Forwarding message:', message)
-        if re.match(forward_to_client_regex,message):
-            self.clientConnection.send(re.match(forward_to_client_regex, message).group(1))
-        elif re.match(forward_to_controller_regex, message):
-            if re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_ACTIVATION_MESSAGE:
-                self.isAutonomyActivated = True
-            elif re.match(forward_to_controller_regex, message).group(1) is AUTONOMY_DEACTIVATION_MESSAGE:
-                self.isAutonomyActivated = False
-        elif re.match("^-m([\s\S]*)$", message):
-            motor_message = re.match("^-m([\s\S]*)$", message).group(1)
-            self.motorConnection.parse_message(motor_message)
-
+        if (message[0]=="w"):
+            self.motorConnection.left_drive(-50)
+            self.motorConnection.right_drive(-50)
+        elif (message[0]=="s"):
+            self.motorConnection.left_drive(0)
+            self.motorConnection.right_drive(0)
+        elif (message[0]=="a"):
+            self.motorConnection.left_drive(25)
+            self.motorConnection.right_drive(-25)
+        elif (message[0]=="d"):
+            self.motorConnection.left_drive(-25)
+            self.motorConnection.right_drive(25)
     def shutdown(self):
         self.motorConnection.close()
         self.clientConnection.close_server_socket()
