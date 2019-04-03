@@ -21,6 +21,7 @@ class ForwardingPrefix(enum.Enum):
     OBJECT = '-o'
 
 # Commented out for testing purposes only
+SPEED = -50
 DEFAULT_CLIENT_IP_ADDRESS = '10.152.173.226'
 DEFAULT_CLIENT_PORT_NUMBER = 1123
 
@@ -62,10 +63,11 @@ class Controller:
                 self.forward_message(client_message)
 
     def forward_message(self, message):
+        global SPEED
         print('Forwarding message:', message)
         if (message[0]=="w"):
-            self.motorConnection.left_drive(-50)
-            self.motorConnection.right_drive(-50)
+            self.motorConnection.left_drive(SPEED)
+            self.motorConnection.right_drive(SPEED)
         elif (message[0]=="s"):
             self.motorConnection.left_drive(0)
             self.motorConnection.right_drive(0)
@@ -75,6 +77,12 @@ class Controller:
         elif (message[0]=="d"):
             self.motorConnection.left_drive(-25)
             self.motorConnection.right_drive(25)
+        elif (message[0] == "u"):
+            SPEED -= 5
+        elif (message[0] == "j"):
+            SPEED += 5
+        print(SPEED) 
+            
     def shutdown(self):
         self.motorConnection.close()
         self.clientConnection.close_server_socket()
