@@ -34,7 +34,7 @@ class MotorConnection:
     def __init__(self, roboclaw_port='/dev/roboclaw',
                  baud_rate=115200, 
                  left_drive_address=0x80, right_drive_address=0x80, 
-                 actuator_address=0x82, dig_address=0x83):
+                 actuator_address=0x82, dig_address=0x83, conveyorAddress=0x81):
 
         self.roboclaw = Roboclaw(roboclaw_port, baud_rate)
         
@@ -50,6 +50,7 @@ class MotorConnection:
         self.right_drive_address = right_drive_address
         self.actuator_address = actuator_address
         self.dig_address = dig_address
+        self.conveyorAddress = conveyorAddress
         self.bucketAddress = 0x80
 
         self.left_motor_speed = 0
@@ -162,7 +163,7 @@ class MotorConnection:
         #Change direction code missing
         speed_conveyor=speed
         power=self.convert_speed_to_power(speed)
-        self.roboclaw.ForwardM1(0x83, abs(power))
+        self.roboclaw.ForwardM1(self.conveyorAddress, abs(power))
         # motor1=self.roboclaw.ReadEncM1(0x83)
         # print(motor1)
         # self.roboclaw.SpeedM1(0x83, 8)
