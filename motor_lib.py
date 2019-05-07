@@ -3,6 +3,7 @@ import enum
 import time
 from threading import Thread
 from roboclaw import Roboclaw
+import maestro
 
 DEFAULT_TIME_TO_DELAY_MOTOR = 0.02  # 20 milliseconds
 
@@ -56,6 +57,10 @@ class MotorConnection:
         self.actuator_motor_speed = 0
         self.bucket_motor_speed = 0
 
+
+        self.camera_actuator_speed = 0
+        self.camera_servo_speed = 0
+
     @staticmethod
     def direction_of_speed(speed):
         if speed >= 0:
@@ -90,7 +95,7 @@ class MotorConnection:
     def left_drive(self, speed):
         if not self.are_speed_directions_equal(speed, self.left_motor_speed):
             print('Left motor speed changed direction.')
-            self.roboclaw.ForwardM2(0x80, 0)
+            self.roboclaw.ForwardM2(self.left_drive_address, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print('Left motor at speed:', speed, '%')
@@ -98,17 +103,17 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print('Left motor at power:', power)
         if power >= 0:
-            self.roboclaw.BackwardM2(0x80, power)
+            self.roboclaw.BackwardM2(self.left_drive_address, power)
             #self.roboclaw.BackwardM2(self.left_motor_address, power)
         else:
-            self.roboclaw.ForwardM2(0x80, abs(power))
+            self.roboclaw.ForwardM2(self.left_drive_address, abs(power))
 
             #self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
 
     def right_drive(self, speed):
         if not self.are_speed_directions_equal(speed, self.right_motor_speed):
             print('Left motor speed changed direction.')
-            self.roboclaw.ForwardM1(0x80, 0)
+            self.roboclaw.ForwardM1(self.right_drive_address, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print('Right motor at speed:', speed, '%')
@@ -116,12 +121,22 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print('Right motor at power:', power)
         if power >= 0:
-            self.roboclaw.BackwardM1(0x80, power)
+            self.roboclaw.BackwardM1(self.right_drive_address, power)
             #self.roboclaw.BackwardM2(self.left_motor_address, power)
         else:
-            self.roboclaw.ForwardM1(0x80, abs(power))
+            self.roboclaw.ForwardM1(self.right_drive_address, abs(power))
 
             #self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
+
+
+
+    def camera_actuate(self, speed):
+        pass
+
+    def camera_rotate(self, speed):
+        pass
+
+
 
     def bucket_actuate(self, speed):
         if not self.are_speed_directions_equal(speed, self.actuator_motor_speed):
