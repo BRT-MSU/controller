@@ -14,7 +14,7 @@ class Controller:
     ports, or you are using a Windows OS, you can provide the tty port.  For
     example, '/dev/ttyACM2' or for Windows, something like 'COM3'.
     """
-    def __init__(self, tty_address='/dev/ttyACM0', device=0x0c):
+    def __init__(self, tty_address='/dev/ttyACM1', device=0x0c):
         # Open the command port
         self.usb = serial.Serial(tty_address)
         # Command lead-in and device number are sent for each Pololu serial command.
@@ -31,6 +31,7 @@ class Controller:
     """
     def send_command(self, command):
         command_string = self.pololu_command + command
+        #command_string = command_string.encode()
         self.usb.write(command_string)
 
 

@@ -22,7 +22,7 @@ class ForwardingPrefix(enum.Enum):
 
 # Commented out for testing purposes only
 SPEED = -50
-DEFAULT_CLIENT_IP_ADDRESS = '10.152.173.226'
+DEFAULT_CLIENT_IP_ADDRESS = '10.152.186.73'
 DEFAULT_CLIENT_PORT_NUMBER = 1123
 
 DEFAULT_CONTROLLER_IP_ADDRESS = '0.0.0.0'
@@ -69,20 +69,39 @@ class Controller:
             self.motorConnection.left_drive(SPEED)
             self.motorConnection.right_drive(SPEED)
         elif (message[0]=="s"):
+            self.motorConnection.left_drive(-1*SPEED)
+            self.motorConnection.right_drive(-1*SPEED)
+        elif (message[0]=="a"):
+            self.motorConnection.left_drive(50)
+            self.motorConnection.right_drive(-50)
+        elif (message[0]=="d"):
+            self.motorConnection.left_drive(-50)
+            self.motorConnection.right_drive(50)
+        elif (message[0]=="q"):
+            self.motorConnection.bucket_rotate(SPEED)
+        elif (message[0]=="e"):
+            self.motorConnection.bucket_rotate(-1*SPEED)
+        elif (message[0]=="x"):
             self.motorConnection.left_drive(0)
             self.motorConnection.right_drive(0)
-        elif (message[0]=="a"):
-            self.motorConnection.left_drive(25)
-            self.motorConnection.right_drive(-25)
-        elif (message[0]=="d"):
-            self.motorConnection.left_drive(-25)
-            self.motorConnection.right_drive(25)
+            self.motorConnection.bucket_rotate(0)
+            self.motorConnection.conveyor_rotate(0)
+
+            self.motorConnection.bucket_actuate(0)
+        elif (message[0]=="i"):
+            self.motorConnection.bucket_actuate(SPEED)
+
+        elif (message[0]=="k"):
+            self.motorConnection.bucket_actuate(-SPEED)
+
         elif (message[0] == "u"):
             SPEED -= 5
         elif (message[0] == "j"):
             SPEED += 5
-        print(SPEED) 
-            
+        elif (message[0] == "p"):
+            self.motorConnection.conveyor_rotate(SPEED)
+        print(SPEED)
+
     def shutdown(self):
         self.motorConnection.close()
         self.clientConnection.close_server_socket()

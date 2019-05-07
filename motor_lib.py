@@ -34,8 +34,8 @@ class RoboclawStatus(enum.Enum):
 class MotorConnection:
     def __init__(self, roboclaw_port='/dev/roboclaw',
                  baud_rate=115200, 
-                 left_drive_address=0x80, right_drive_address=0x80, 
-                 actuator_address=0x82, dig_address=0x83):
+                 left_drive_address=0x82, right_drive_address=0x83,
+                 actuator_address=0x80, dig_address=0x83, conveyorAddress=0x81):
 
         self.roboclaw = Roboclaw(roboclaw_port, baud_rate)
         
@@ -51,6 +51,8 @@ class MotorConnection:
         self.right_drive_address = right_drive_address
         self.actuator_address = actuator_address
         self.dig_address = dig_address
+        self.conveyorAddress = conveyorAddress
+        self.bucketAddress = 0x81
 
         self.left_motor_speed = 0
         self.right_motor_speed = 0
@@ -104,16 +106,16 @@ class MotorConnection:
         print('Left motor at power:', power)
         if power >= 0:
             self.roboclaw.BackwardM2(self.left_drive_address, power)
-            #self.roboclaw.BackwardM2(self.left_motor_address, power)
+            self.roboclaw.BackwardM1(self.left_drive_address, power)
         else:
             self.roboclaw.ForwardM2(self.left_drive_address, abs(power))
-
-            #self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
+            self.roboclaw.ForwardM1(self.left_drive_address, abs(power))
 
     def right_drive(self, speed):
         if not self.are_speed_directions_equal(speed, self.right_motor_speed):
             print('Left motor speed changed direction.')
             self.roboclaw.ForwardM1(self.right_drive_address, 0)
+            self.roboclaw.ForwardM2(self.right_drive_address, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print('Right motor at speed:', speed, '%')
@@ -122,12 +124,10 @@ class MotorConnection:
         print('Right motor at power:', power)
         if power >= 0:
             self.roboclaw.BackwardM1(self.right_drive_address, power)
-            #self.roboclaw.BackwardM2(self.left_motor_address, power)
+            self.roboclaw.BackwardM2(self.right_drive_address, power)
         else:
             self.roboclaw.ForwardM1(self.right_drive_address, abs(power))
-
-            #self.roboclaw.ForwardM2(self.left_motor_address, abs(power))
-
+            self.roboclaw.ForwardM2(self.right_drive_address, abs(power))
 
 
     def camera_actuate(self, speed):
@@ -156,7 +156,7 @@ class MotorConnection:
     def bucket_rotate(self, speed):
         if not self.are_speed_directions_equal(speed, self.bucket_motor_speed):
             print('Bucket motor speed changed direction.')
-            self.roboclaw.ForwardM2(self.bucketAddress, 0)
+            self.roboclaw.ForwardM1(self.bucketAddress, 0)
             time.sleep(DEFAULT_TIME_TO_DELAY_MOTOR)
 
         print('Bucket motor at speed:', speed, '%')
@@ -164,10 +164,17 @@ class MotorConnection:
         power = self.convert_speed_to_power(speed)
         print('Bucket motor at power:', power)
         if power >= 0:
-            self.roboclaw.BackwardM2(self.bucketAddress, power)
+            self.roboclaw.BackwardM1(self.bucketAddress, power)
         else:
-            self.roboclaw.ForwardM2(self.bucketAddress, abs(power))
-
+            self.roboclaw.ForwardM1(self.bucketAddress, abs(power))
+    def conveyor_rotate(self, speed):
+        #Change direction code missing
+        speed_conveyor=speed
+        power=self.convert_speed_to_power(speed)
+        self.roboclaw.ForwardM1(self.conveyorAddress, abs(power))
+        # motor1=self.roboclaw.ReadEncM1(0x83)
+        # print(motor1)
+        # self.roboclaw.SpeedM1(0x83, 8)
     def parse_message(self, message):
         sub_messages = motorMessageRegex.findall(message)
 
